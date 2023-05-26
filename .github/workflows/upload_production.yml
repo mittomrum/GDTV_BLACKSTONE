@@ -1,0 +1,43 @@
+name: Upload From Cache 🤞
+
+on:
+  workflow_dispatch:
+
+jobs:
+  Upload_production:
+    name: Upload production to Itch
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [WebGL]
+        channel: [production]
+
+    steps:
+      - name: Verify build directory
+        run: |
+          if [ ! -d "CICD/WebGL" ]; then
+            echo "Directory not found!"
+            exit 1
+          fi
+
+      - name: Cache WebGl build
+        uses: actions/cache@v2
+        with:
+          path: CICD/WebGL
+          key: ${{ runner.os }}-build-webgl-${{ matrix.template }}
+          restore-keys: |
+            ${{ runner.os }}-build-webgl-${{ matrix.template }}
+
+      - name: Display structure of root files
+        run: ls -R
+        working-directory: CICD/WebGL
+
+      - name: Upload to Itch
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{ secrets.ITCH_IO_API_KEY }}
+          gameData: ./CICD/${{ matrix.template }}
+          itchUsername: ${{ env.ITCH_USERNAME }}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: ${{ matrix.channel }}
